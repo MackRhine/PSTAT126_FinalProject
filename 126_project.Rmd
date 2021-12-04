@@ -1,0 +1,220 @@
+---
+title: "126_project"
+author: "Michael Rhine-6342398"
+date: "6/5/2020"
+output: html_document
+---
+
+#IMPORT DATA
+```{r}
+rwine <- read.csv("winequality-red.csv")
+quality = rwine$quality
+facid = rwine$fixed.acidity
+vacid = rwine$volatile.acidity
+cacid = rwine$citric.acid
+rsugar = rwine$residual.sugar
+chlorides = rwine$chlorides
+fSO2 = rwine$free.sulfur.dioxide
+tSO2 = rwine$total.sulfur.dioxide
+Density = rwine$density
+pH = rwine$pH
+sulphates = rwine$sulphates
+alcohol = rwine$alcohol
+
+x1=alcohol
+x2=vacid
+x3=sulphates
+x4=tSO2
+x5=chlorides
+x6=pH
+x7=fSO2
+y=quality
+
+
+```
+```{r}
+
+```
+
+F-Test to determine if fSO2 is needed
+```{r}
+mod.full=lm(y~x1+x2+x3+x4+x5+x6+x7)
+mod.red=lm(y~x1+x2+x3+x4+x5+x6)
+
+anova(mod.red,mod.full)
+```
+Question 1
+
+```{r}
+
+
+# Importing and renaming variables
+
+rwine <- read.csv("winequality-red.csv")
+quality = rwine$quality
+facid = rwine$fixed_acidity
+vacid = rwine$volatile_acidity
+cacid = rwine$citric_acid
+rsugar = rwine$residual_sugar
+chlorides = rwine$chlorides
+fSO2 = rwine$free_sulfur_dioxide
+tSO2 = rwine$total_sulfur_dioxide
+Density = rwine$density
+pH = rwine$pH
+sulphates = rwine$sulphates
+alcohol = rwine$alcohol
+
+#Find (& remove) influential data points via Cook's Distance Measure
+
+fit=lm(quality ~ facid + vacid + cacid + rsugar + chlorides +
+     	fSO2 + tSO2 + Density + pH + sulphates + alcohol)
+plot(cooks.distance(fit), main = "Cook's Distance Measure")
+which(cooks.distance(fit)>.5)
+
+# Stepwise regression of winequality-red using AIC
+
+mod0 = lm(quality ~ 1)
+modup = lm(quality ~ facid + vacid + cacid + rsugar + chlorides +
+          	fSO2 + tSO2 + Density + pH + sulphates + alcohol)
+step(mod0, scope = list(lower = mod0, upper = modup))
+
+# Compare subsets with Mallow's Cp and adjusted R-squared
+
+mod = regsubsets(cbind(facid, vacid, cacid, rsugar, chlorides, fSO2,
+                     	tSO2, Density, pH, sulphates, alcohol), quality, nvmax = 11)
+summary.mod <- summary(mod)
+summary.mod$which
+summary.mod$cp
+summary.mod$adjr2
+
+#initial fitted model
+x1=alcohol
+x2=vacid
+x3=sulphates
+x4=tSO2
+x5=chlorides
+x6=pH
+x7=fSO2
+y=quality
+fit=lm(y~x1+x2+x3+x4+x5+x6+x7)
+
+```
+
+Question 2
+```{r}
+# Scatterplot matrix
+pairs(~ quality + alcohol + vacid + sulphates + tSO2 + chlorides + pH + fSO2)
+
+# Correlation matrix
+variables = rwine[,c(12,11,2,10,7,5,9,6),drop=FALSE]
+cor(variables)
+
+#Predicted quality score and confidence interval with min/maxed predictors
+fit=lm(y~x1+x2+x3+x4+x5+x6+x7)
+
+data.max=data.frame(x1=max(x1),x2=min(x2),x3=max(x3), x4=min(x4), x5=min(x5), x6=min(x6),x7=max(x7))
+
+predict(fit, data.max, interval='predict', level=0.95)
+predict(fit, data.max, interval='confidence', level=0.95)
+
+
+```
+
+Question 3
+```{r}
+# General Linear F-Test for I(fSO2*tSO2)
+mod.full=lm(y~x1+x2+x3+x4+x5+x6+x7+I(x4*x7))
+mod.red=lm(y~x1+x2+x3+x4+x5+x6+x7)
+
+anova(mod.red,mod.full)
+
+# Test second order
+
+# alcohol
+alcohol2 = alcohol**2
+summary(lm(quality ~ alcohol + alcohol2))
+
+# vacid
+vacid2 = vacid**2
+summary(lm(quality ~ vacid + vacid2))
+
+# sulphates
+sulphates2 = sulphates**2
+summary(lm(quality ~ sulphates + sulphates2))
+
+# tSO2
+tSO22 = tSO2**2
+summary(lm(quality ~ tSO2 + tSO22))
+
+# chlorides
+chlorides2 = chlorides**2
+summary(lm(quality ~ chlorides + chlorides2))
+
+#pH
+pH2 = pH**2
+summary(lm(quality ~ pH + pH2))
+
+#fSO2
+fSO22 = fSO2**2
+summary(lm(quality ~ fSO2 + fSO22))
+
+# Put significant second order value into step function
+mod0 <- lm(quality ~ 1)
+modup <- lm(quality ~ vacid + chlorides + fSO2 + tSO2 + pH +
+          	sulphates + alcohol + chlorides2 + sulphates2)
+step(mod0, scope = list(lower = mod0, upper = modup))
+```
+```{r}
+# Test third order
+sulphates3 = sulphates**3
+summary(lm(quality ~ sulphates + sulphates2 + sulphates3))
+
+# Put significant third order value into step function
+mod0 <- lm(quality ~ 1)
+modup <- lm(quality ~ vacid + chlorides + sulphates3 +
+          	fSO2 + tSO2 + pH + sulphates + alcohol + sulphates2)
+step(mod0, scope = list(lower = mod0, upper = modup))
+```
+
+```{r}
+# Test fourth order
+sulphates4 = sulphates**4
+summary(lm(quality ~ sulphates + sulphates2 + sulphates3 + sulphates4))
+# Compare with Mallow's Cp and adjusted R-squared
+mod = regsubsets(cbind(vacid, chlorides, fSO2, tSO2, pH, sulphates,
+                    	alcohol, sulphates2, sulphates3), quality, nvmax = 11)
+summary.mod <- summary(mod)
+summary.mod$which
+summary.mod$cp
+summary.mod$adjr2
+```
+
+```{r}
+#Res. Vs. Fit Plot
+
+fin.mod=lm(y~x1+x2+x3+x4+x5+x6+x7+tso22+sulphates2+sulphates3)
+
+res=resid(fin.mod)
+fitt=fitted(fin.mod)
+plot(x=fitt,y=res,xlab="fitted values", ylab="residual values",main='Residual vs. Fit Plot')+abline(h=0, col='red')
+
+#qqnorm Plot
+
+qqnorm(res, main='qqnorm Plot',xlab="Theoretical Quantiles  \n lm(y~x1+x2+x3+x4+x5+x6+x7+tso22+sulphates2+sulphates3)")
+qqline(res, col='red')
+
+#Box-Cox Normality Plot
+
+library(MASS)
+boxcox(mod.fin)
+
+#Predicted Quality Score & Confidence Interval with Final Model
+
+fit.fin=lm(y~alcohol+vacid+sulphates+sulphates2+sulphates3+tSO2+chlorides+pH+fSO2)
+
+data.max.int=data.frame(alcohol=max(alcohol), vacid=min(vacid), sulphates=max(sulphates),sulphates2=max(sulphates2),sulphates3=max(sulphates3),tSO2=min(tSO2), chlorides=min(chlorides), pH=min(pH), fSO2=max(fSO2))
+
+predict(fit.fin,data.max.int,interval='predict',level=0.95)
+predict(fit.fin,data.max.int,interval='confidence',level=0.95)
+```
+
